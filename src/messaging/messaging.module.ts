@@ -15,8 +15,8 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           },
         ],
         uri:
-          config.get('RABBITMQ_URL') ||
-          `amqp://${config.get('RABBITMQ_USER', 'guest')}:${config.get('RABBITMQ_PASSWORD', 'guest')}@${config.get('RABBITMQ_HOST', 'localhost')}:${config.get('RABBITMQ_PORT', '5672')}`,
+          config.get<string>('RABBITMQ_URL') ||
+          `amqp://${config.get<string>('RABBITMQ_USER', 'guest')}:${config.get<string>('RABBITMQ_PASSWORD', 'guest')}@${config.get<string>('RABBITMQ_HOST', 'localhost')}:${config.get<string>('RABBITMQ_PORT', '5672')}`,
         connectionInitOptions: { wait: true, timeout: 30000 },
       }),
     }),
@@ -24,4 +24,3 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
   exports: [RabbitMQModule],
 })
 export class MessagingModule {}
-

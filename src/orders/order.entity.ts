@@ -1,5 +1,13 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
+/**
+ * Entidade de banco de dados para pedidos persistidos.
+ */
 @Entity('orders')
 export class OrderEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -20,4 +28,3 @@ export class OrderEntity {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
-

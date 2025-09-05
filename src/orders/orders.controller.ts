@@ -10,10 +10,17 @@ export class OrdersController {
     private readonly rabbitService: RabbitService,
   ) {}
 
+  /**
+   * Recebe um payload de pedido, valida e publica um evento no RabbitMQ.
+   *
+   * A persistência acontece no OrdersConsumer ao consumir a mensagem.
+   */
   @Post()
   async create(@Body() body: CreateOrderDto): Promise<{ status: string }> {
-    await this.rabbitService.publishMessage({ type: 'order.created', data: body });
+    await this.rabbitService.publishMessage({
+      type: 'order.created',
+      data: body,
+    });
     return { status: 'queued' };
   }
 }
-

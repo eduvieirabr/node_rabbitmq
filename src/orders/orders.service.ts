@@ -11,6 +11,9 @@ export class OrdersService {
     private readonly orderRepository: Repository<OrderEntity>,
   ) {}
 
+  /**
+   * Persists a new order entity in the database.
+   */
   async create(createDto: CreateOrderDto): Promise<OrderEntity> {
     const entity: OrderEntity = this.orderRepository.create({
       customerName: createDto.customerName,
@@ -21,4 +24,3 @@ export class OrdersService {
     return this.orderRepository.save(entity);
   }
 }
-

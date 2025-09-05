@@ -9,18 +9,31 @@ export class OrdersConsumer {
 
   constructor(private readonly ordersService: OrdersService) {}
 
+  /**
+   * Consumes order-created events from RabbitMQ and persists the order.
+   */
   @RabbitSubscribe({
     exchange: process.env.RABBITMQ_EXCHANGE || 'app.exchange',
     routingKey: process.env.RABBITMQ_ROUTING_KEY || 'app.route',
     queue: process.env.RABBITMQ_QUEUE || 'app.queue',
   })
-  async handle(payload: { type?: string; data?: CreateOrderDto } | unknown): Promise<void> {
+  async handle(payload: unknown): Promise<void> {
     this.logger.log(`Mensagem recebida: ${JSON.stringify(payload)}`);
-    const maybeOrder = payload as { type?: string; data?: CreateOrderDto };
-    if (maybeOrder?.type === 'order.created' && maybeOrder.data) {
-      await this.ordersService.create(maybeOrder.data);
+    if (isOrderCreatedEvent(payload)) {
+      await this.ordersService.create(payload.data);
       this.logger.log('Pedido salvo no PostgreSQL');
     }
   }
 }
 
+function isOrderCreatedEvent(
+  value: unknown,
+): value is { type: 'order.created'; data: CreateOrderDto } {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as { type?: unknown; data?: unknown };
+  return (
+    candidate.type === 'order.created' &&
+    typeof candidate.data === 'object' &&
+    candidate.data !== null
+  );
+}

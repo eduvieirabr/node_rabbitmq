@@ -9,4 +9,3 @@ import { RabbitController } from './rabbit.controller';
   exports: [RabbitService],
 })
 export class RabbitModule {}
-

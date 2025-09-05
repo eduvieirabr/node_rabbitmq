@@ -9,12 +9,12 @@ services:
       rabbitmq:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=development
       - PORT=3000
       - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432        # <- interno no cluster Docker
+      - DATABASE_PORT=5432 # <- interno no cluster Docker
       - DATABASE_USER=postgres
       - DATABASE_PASSWORD=postgres
       - DATABASE_NAME=appdb
@@ -25,13 +25,13 @@ services:
       - RABBITMQ_EXCHANGE=app.exchange
       - RABBITMQ_ROUTING_KEY=app.route
       - RABBITMQ_QUEUE=app.queue
-    command: ["node", "dist/main.js"]
+    command: ['node', 'dist/main.js']
 
   postgres:
     image: postgres:16-alpine
     container_name: postgres
     ports:
-      - "5435:5432"               # <- host:container
+      - '5435:5432' # <- host:container
     environment:
       - POSTGRES_DB=appdb
       - POSTGRES_USER=postgres
@@ -39,7 +39,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d appdb"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d appdb']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -48,13 +48,13 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - '5672:5672'
+      - '15672:15672'
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
       interval: 5s
       timeout: 3s
       retries: 10

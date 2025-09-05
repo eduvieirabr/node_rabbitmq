@@ -13,4 +13,3 @@ import { RabbitModule } from '../rabbit/rabbit.module';
   exports: [OrdersService],
 })
 export class OrdersModule {}
-
