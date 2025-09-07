@@ -68,7 +68,122 @@ Teste de publicação de mensagem:
 curl "http://localhost:3000/rabbit/publish?msg=hello"
 ```
 
+## Auth (JWT)
+
+Exemplo simples de autenticação com JWT (usuários mock) para proteger o BFF.
+
+- Usuários de exemplo:
+  - dev@example.com / dev123 (role: user)
+  - admin@example.com / admin123 (role: admin)
+
+- Variáveis opcionais (defaults):
+  - `JWT_ACCESS_SECRET` (default `access-secret`)
+  - `JWT_ACCESS_EXPIRES` (default `15m`)
+  - `JWT_REFRESH_SECRET` (default `refresh-secret`)
+  - `JWT_REFRESH_EXPIRES` (default `7d`)
+
+Login (gera accessToken e refreshToken):
+
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "dev@example.com",
+    "password": "dev123"
+  }'
+```
+
+Usar o access token para acessar rota protegida (`POST /orders`):
+
+```bash
+ACCESS_TOKEN="<cole_o_accessToken_aqui>"
+
+curl -X POST http://localhost:3000/orders \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerName": "John Doe",
+    "customerEmail": "john@example.com",
+    "items": [
+      { "sku": "SKU-1", "quantity": 2, "price": 10.5 },
+      { "sku": "SKU-2", "quantity": 1, "price": 5 }
+    ],
+    "total": 26
+  }'
+```
+
+Refresh do token (gera novo par access/refresh):
+
+```bash
+curl -X POST http://localhost:3000/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<cole_o_refreshToken_aqui>"
+  }'
+```
+
 ## Run tests
+
+## Kong (API Gateway) + Redis (cache)
+
+Este projeto inclui Kong (DB-less) como gateway e Redis para cache/controle de tokens.
+
+- Kong
+  - Proxy: `http://localhost:8000`
+  - Admin: `http://localhost:8001`
+  - Configuração: `kong/kong.yml`
+  - Plugin JWT habilitado na rota do BFF; consumer `authservice` (HS256, `secret: supersecret`).
+  - O token precisa conter `iss=authservice` e será validado pelo Kong antes de chegar à API.
+
+- Redis
+  - Usado para: cache de refresh token (`jti`) e idempotência em `POST /orders`.
+
+### Subir o stack com gateway e cache
+
+```bash
+docker compose up -d --build
+```
+
+### Fluxo via Kong
+
+1) Obter tokens no BFF (local, porta 3000):
+
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "dev@example.com", "password": "dev123" }'
+```
+
+2) Chamar a API protegida via Kong (porta 8000):
+
+```bash
+ACCESS_TOKEN="<cole_o_accessToken_aqui>"
+
+curl -X POST http://localhost:8000/orders \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerName": "John Doe",
+    "customerEmail": "john@example.com",
+    "items": [
+      { "sku": "SKU-1", "quantity": 2, "price": 10.5 },
+      { "sku": "SKU-2", "quantity": 1, "price": 5 }
+    ],
+    "total": 26
+  }'
+```
+
+3) Renovar tokens (direto no BFF):
+
+```bash
+curl -X POST http://localhost:3000/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{ "refreshToken": "<cole_o_refreshToken_aqui>" }'
+```
+
+Notas:
+- O Kong rejeita tokens inválidos/expirados antes de chegar no BFF (defense-in-depth).
+- `JWT_ACCESS_SECRET` está definido no compose como `supersecret`, alinhado com o `kong.yml`.
 
 ```bash
 # unit tests

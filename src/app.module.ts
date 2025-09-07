@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { RabbitModule } from './rabbit/rabbit.module';
 import { OrdersModule } from './orders/orders.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { AuthModule } from './auth/auth.module';
+import { RedisModule } from './cache/redis.module';
 
 /**
  * Módulo raiz da aplicação.
@@ -38,6 +40,8 @@ import { MessagingModule } from './messaging/messaging.module';
     RabbitModule,
     OrdersModule,
     MessagingModule,
+    AuthModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

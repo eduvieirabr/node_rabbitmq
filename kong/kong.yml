@@ -1,0 +1,49 @@
+# Versão do formato declarativo do Kong
+_format_version: "3.0"
+
+# Quando true, permite que o Kong faça normalizações automáticas (por ex. lower-case, etc.)
+_transform: true
+
+services:
+  # Serviço que representa o BFF Node (Nest) dentro da rede Docker.
+  # O host "app" é o nome do serviço no docker-compose; o Kong acessa internamente.
+  - name: bff-node
+    url: http://app:3000
+    routes:
+      # Rota padrão que cobre todas as paths ("/") e exige JWT.
+      - name: bff-node-route
+        paths:
+          - /
+        strip_path: false
+        plugins:
+          # Plugin JWT aplicado APENAS nesta rota (não afeta /auth abaixo)
+          - name: jwt
+            config:
+              # Claim do emissor que será verificado contra a key do consumer
+              key_claim_name: iss
+              # Segredo não está em base64
+              secret_is_base64: false
+              # Verificar expiração do token (claim exp)
+              claims_to_verify:
+                - exp
+              # Permitir CORS/OPTIONS sem forçar token
+              run_on_preflight: true
+
+      # Rota específica para /auth, sem plugin JWT, para login/refresh
+      - name: auth-route
+        paths:
+          - /auth
+        strip_path: false
+
+consumers:
+  # Consumer que representa o emissor/serviço de autenticação (ISS)
+  - username: authservice
+    custom_id: authservice
+    jwt_secrets:
+      # Par chave/segredo usado para assinar/verificar JWT (HS256 por padrão)
+      - algorithm: HS256
+        # key deve coincidir com o claim iss do token
+        key: authservice
+        # Segredo compartilhado (deve coincidir com o segredo usado pelo emissor)
+        secret: supersecret
+

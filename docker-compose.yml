@@ -8,8 +8,9 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    ports:
-      - '3000:3000'
+      redis:
+        condition: service_started
+    # Não expõe porta no host; o Kong acessa pela rede interna (app:3000)
     environment:
       - NODE_ENV=development
       - PORT=3000
@@ -25,6 +26,12 @@ services:
       - RABBITMQ_EXCHANGE=app.exchange
       - RABBITMQ_ROUTING_KEY=app.route
       - RABBITMQ_QUEUE=app.queue
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_ACCESS_SECRET=supersecret
+      - JWT_ACCESS_EXPIRES=15m
+      - JWT_REFRESH_SECRET=refresh-secret
+      - JWT_REFRESH_EXPIRES=7d
     command: ['node', 'dist/main.js']
 
   postgres:
@@ -59,5 +66,35 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kong:
+    image: kong:3.6
+    container_name: kong
+    depends_on:
+      app:
+        condition: service_started
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_LOG_LEVEL=info
+    volumes:
+      - ./kong/kong.yml:/etc/kong/kong.yml:ro
+    ports:
+      - '8000:8000'
+      - '8001:8001'
+
 volumes:
   pgdata: {}
+
