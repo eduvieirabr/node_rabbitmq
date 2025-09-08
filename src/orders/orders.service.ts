@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrderEntity } from './order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { MoreThan } from 'typeorm';
 
 @Injectable()
 export class OrdersService {
@@ -22,5 +23,15 @@ export class OrdersService {
       total: String(createDto.total),
     });
     return this.orderRepository.save(entity);
+  }
+
+  /**
+   * Retorna orders criadas após a data informada.
+   */
+  async findNewSince(since: Date): Promise<OrderEntity[]> {
+    return this.orderRepository.find({
+      where: { createdAt: MoreThan(since) },
+      order: { createdAt: 'ASC' },
+    });
   }
 }

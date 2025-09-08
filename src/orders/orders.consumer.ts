@@ -1,13 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { OrdersService } from './orders.service';
+import { OrdersEventsService } from './orders.events';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 @Injectable()
 export class OrdersConsumer {
   private readonly logger = new Logger(OrdersConsumer.name);
 
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly ordersEvents: OrdersEventsService,
+  ) {}
 
   /**
    * Consumes order-created events from RabbitMQ and persists the order.
@@ -20,7 +24,8 @@ export class OrdersConsumer {
   async handle(payload: unknown): Promise<void> {
     this.logger.log(`Mensagem recebida: ${JSON.stringify(payload)}`);
     if (isOrderCreatedEvent(payload)) {
-      await this.ordersService.create(payload.data);
+      const saved = await this.ordersService.create(payload.data);
+      this.ordersEvents.emit(saved);
       this.logger.log('Pedido salvo no PostgreSQL');
     }
   }

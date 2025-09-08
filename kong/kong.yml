@@ -28,6 +28,7 @@ services:
                 - exp
               # Permitir CORS/OPTIONS sem forçar token
               run_on_preflight: true
+          # (removido) request-transformer que injetava Authorization estático
 
       # Rota específica para /auth, sem plugin JWT, para login/refresh
       - name: auth-route
@@ -46,4 +47,5 @@ consumers:
         key: authservice
         # Segredo compartilhado (deve coincidir com o segredo usado pelo emissor)
         secret: supersecret
+  # (removido) consumer 'anonymous' — JWT passa a ser obrigatório
 

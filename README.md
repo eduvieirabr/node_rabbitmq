@@ -185,6 +185,91 @@ Notas:
 - O Kong rejeita tokens inválidos/expirados antes de chegar no BFF (defense-in-depth).
 - `JWT_ACCESS_SECRET` está definido no compose como `supersecret`, alinhado com o `kong.yml`.
 
+## Orders - SSE e REST (novos pedidos)
+
+Fornecemos dois meios para o front detectar e buscar novas orders:
+
+- SSE (Server-Sent Events): push em tempo real quando um novo pedido chega
+- REST: listagem de orders criadas após um instante de tempo
+
+### Endpoints
+
+- `GET /orders/stream` (SSE, protegido por JWT)
+  - Emite eventos com `{ id, createdAt }` sempre que uma nova order é salva no DB
+- `GET /orders/new?since=<ISO_DATETIME>` (REST, protegido por JWT)
+  - Retorna a lista das orders criadas após o timestamp `since`
+
+Ambos os endpoints também passam pelo Kong:
+- SSE via gateway: `http://localhost:8000/orders/stream`
+- REST via gateway: `http://localhost:8000/orders/new?since=...`
+
+### Teste rápido (SSE)
+
+Obtenha um access token com `/auth/login` e conecte no stream:
+
+```bash
+curl -N \
+  -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  http://localhost:8000/orders/stream
+```
+
+Em outro terminal, crie uma order (via gateway) e observe o evento chegar no stream:
+
+```bash
+curl -X POST http://localhost:8000/orders \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "customerName": "John Doe",
+    "customerEmail": "john@example.com",
+    "items": [ { "sku": "SKU-1", "quantity": 1, "price": 9.9 } ],
+    "total": 9.9
+  }'
+```
+
+### Teste rápido (REST)
+
+Liste as orders novas desde um horário (ISO):
+
+```bash
+curl "http://localhost:8000/orders/new?since=2025-09-07T22:00:00Z" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+### Consumo no Front (exemplo)
+
+No browser, o `EventSource` nativo não permite enviar headers; use uma lib que suporte headers (ex.: `@microsoft/fetch-event-source`) ou autenticação por cookie.
+
+```js
+import { fetchEventSource } from '@microsoft/fetch-event-source';
+
+async function subscribeOrders(token) {
+  await fetchEventSource('http://localhost:8000/orders/stream', {
+    headers: { Authorization: `Bearer ${token}` },
+    onmessage(ev) {
+      const data = JSON.parse(ev.data);
+      console.log('nova order:', data);
+      // opcional: após receber o evento, chamar /orders/new?since=... para buscar detalhes
+    },
+    onerror(err) {
+      console.error('sse error', err);
+    },
+  });
+}
+```
+
+### Injeção de header pelo Kong (educativo)
+
+Neste projeto, adicionamos um exemplo didático usando o plugin `request-transformer` do Kong para adicionar um header ao upstream:
+
+- Header injetado: `X-Gateway-Token: supersecret-gw`
+- Guard no BFF: `KongOrJwtAuthGuard` autoriza se houver `request.user` (JWT) OU se o header injetado estiver presente.
+
+Importante:
+- As rotas protegidas (como `/orders`) continuam com plugin JWT habilitado no Kong; portanto, o gateway exige `Authorization: Bearer <token>` para encaminhar a requisição. O header injetado é apenas para demonstrar como enriquecer chamadas ao upstream.
+- Se você quiser aceitar SOMENTE o header do gateway (sem JWT no gateway), desabilite o plugin JWT na rota correspondente no `kong/kong.yml`. Para produção, prefira alternativas mais robustas (por exemplo, o Kong assinar um JWT para o upstream ou mTLS entre gateway e BFF).
+
 ```bash
 # unit tests
 $ npm run test
